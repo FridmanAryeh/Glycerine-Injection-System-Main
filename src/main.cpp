@@ -2,6 +2,14 @@
 #include <Arduino.h>
 #include "parameters.h"
 
+void Green_LEDs_out() 
+{
+  digitalWrite(LED_A, LOW);
+  digitalWrite(LED_B, LOW);
+  digitalWrite(LED_C, LOW);
+  digitalWrite(LED_D, LOW);
+  digitalWrite(LED_E, LOW);
+}
 
 SoftwareSerial Pump(Recieve_From_Pump, Transmit_To_Pump);  //Defining pins for pump serial input and ouput
 
@@ -40,26 +48,35 @@ void Wash_function(){   // Replace all old glycerine in pipes with new glycerine
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_2, 8);
+    gen_function(Speed_09_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
+    gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_3, 8);
+    gen_function(Speed_09_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
+    gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_4, 8);
+    gen_function(Speed_09_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
+    gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_5, 8);
+    gen_function(Speed_09_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
+    gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_6, 8);
+    gen_function(Speed_09_mms, 8);
     gen_function(push_2400, 8);
     digitalWrite(WorkingOutput, LOW);  
     digitalWrite(WashOutput, HIGH);   
@@ -71,29 +88,29 @@ void Auto_function(){  // filling up applicators in pulses. between each pulse s
     Green_LEDs_out();
     gen_function(Speed_1_mms, 8);
     gen_function(Valve_to_1, 8);
-    gen_function(intake_250, 8);
+    gen_function(intake_120, 8);
     delay(5000);
     gen_function(Speed_003_mms, 8);
-    for (int t = 0; t < 5; t++)  // repeat sequence five times
+    for (int t = 0; t < 2; t++)  // repeat sequence two times
     {
       gen_function(Valve_to_2, 8);
-      gen_function(push_10, 8);
+      gen_function(push_12, 8);
       delay(4000);
       gen_function(Valve_to_3, 8);
-      gen_function(push_10, 8); 
+      gen_function(push_12, 8); 
       delay(4000);   
       gen_function(Valve_to_4, 8);
-      gen_function(push_10, 8);    
+      gen_function(push_12, 8);    
       delay(4000);
       gen_function(Valve_to_5, 8);
-      gen_function(push_10, 8);
+      gen_function(push_12, 8);
       delay(4000);   
       gen_function(Valve_to_6, 8);
-      gen_function(push_10, 8);
+      gen_function(push_12, 8);
       delay(4000);
     }
     delay(80000);
-    Green_LEDs_on();
+    //Green_LEDs_on();
     digitalWrite(WorkingOutput, LOW);
 }
 
@@ -235,14 +252,7 @@ void Reset_function(){
   gen_function(reset, 8);
   digitalWrite(WorkingOutput, LOW);  // Turn off WORKING light
 }
-void Green_LEDs_out() 
-{
-  digitalWrite(LED_A, LOW);
-  digitalWrite(LED_B, LOW);
-  digitalWrite(LED_C, LOW);
-  digitalWrite(LED_D, LOW);
-  digitalWrite(LED_E, LOW);
-}
+
 
 void Green_LEDs_on()
 {
