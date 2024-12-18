@@ -48,70 +48,84 @@ void Wash_function(){   // Replace all old glycerine in pipes with new glycerine
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_2, 8);
-    gen_function(Speed_09_mms, 8);
+    gen_function(Speed_08_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
     gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_3, 8);
-    gen_function(Speed_09_mms, 8);
+    gen_function(Speed_08_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
     gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_4, 8);
-    gen_function(Speed_09_mms, 8);
+    gen_function(Speed_08_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
     gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_5, 8);
-    gen_function(Speed_09_mms, 8);
+    gen_function(Speed_08_mms, 8);
     gen_function(push_2400, 8);
     gen_function(Valve_to_1, 8);
     gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(Valve_to_6, 8);
-    gen_function(Speed_09_mms, 8);
+    gen_function(Speed_08_mms, 8);
     gen_function(push_2400, 8);
     digitalWrite(WorkingOutput, LOW);  
     digitalWrite(WashOutput, HIGH);   
 }
 
-void Auto_function(){  // filling up applicators in pulses. between each pulse switch port 
+void Auto(byte intake[], byte push[], int reps, long end_delay){ //general program without parameters 
     digitalWrite(WorkingOutput, HIGH);  //Turn on WORKING light
-    Serial.println("starting auto push");
     Green_LEDs_out();
     gen_function(Speed_1_mms, 8);
     gen_function(Valve_to_1, 8);
-    gen_function(intake_120, 8);
+    gen_function(intake, 8);
     delay(5000);
     gen_function(Speed_003_mms, 8);
-    for (int t = 0; t < 2; t++)  // repeat sequence two times
+    for (int t = 0; t < reps; t++)  // repeat sequence 
     {
       gen_function(Valve_to_2, 8);
-      gen_function(push_12, 8);
+      gen_function(push, 8);
       delay(4000);
       gen_function(Valve_to_3, 8);
-      gen_function(push_12, 8); 
+      gen_function(push, 8); 
       delay(4000);   
       gen_function(Valve_to_4, 8);
-      gen_function(push_12, 8);    
+      gen_function(push, 8);    
       delay(4000);
       gen_function(Valve_to_5, 8);
-      gen_function(push_12, 8);
+      gen_function(push, 8);
       delay(4000);   
       gen_function(Valve_to_6, 8);
-      gen_function(push_12, 8);
+      gen_function(push, 8);
       delay(4000);
     }
-    delay(80000);
+    delay(end_delay);
     //Green_LEDs_on();
-    digitalWrite(WorkingOutput, LOW);
+    digitalWrite(WorkingOutput, LOW); 
+}
+
+void Auto_function(int option){ //parameters for each program
+  switch (option)
+  {
+  case 1:
+    Auto(intake_240,push_12,4,80000);
+    break;
+  case 2:
+    Auto(intake_220,push_11,4,95000);
+    break;
+  case 3:
+    Auto(intake_200,push_10,4,105000);
+    break;  
+  }
 }
 
 void Manual_intake_function(int sum) // pump intake depends on how many applicators 
@@ -271,7 +285,7 @@ void setup()
   pinMode(Transmit_To_PC, OUTPUT);     //no wire attached physically; used for PC connection
   pinMode(ManualInput, INPUT_PULLUP);  //2;
   pinMode(WashInput, INPUT_PULLUP);    //3
-  pinMode(AutoInput, INPUT_PULLUP);    //4
+  pinMode(AutoInput_1, INPUT_PULLUP);    //4
   pinMode(GoInput, INPUT_PULLUP);      //5
   pinMode(WorkingOutput, OUTPUT);      //6
   pinMode(SwitchA, INPUT);             //7
@@ -280,7 +294,8 @@ void setup()
   pinMode(SwitchD, INPUT);             //21 Analog!
   pinMode(SwitchE, INPUT);             //20 Analog!
   pinMode(WashOutput, OUTPUT);         //12
-  pinMode(FlexInput, INPUT_PULLUP);   //10
+  pinMode(AutoInput_2, INPUT_PULLUP);   //10
+  pinMode(AutoInput_3, INPUT_PULLUP);   //13
   pinMode(Recieve_From_Pump, INPUT);   //14
   pinMode(Transmit_To_Pump, OUTPUT);   //15
   pinMode(LED_A, OUTPUT);              //16
@@ -288,8 +303,8 @@ void setup()
   pinMode(LED_C, OUTPUT);              //18
   pinMode(LED_D, OUTPUT);              //19
   pinMode(LED_E, OUTPUT);              //11
-  gen_function(Valve_to_1, 8);         // Reset pump every 1 time machine turns on
-  gen_function(reset, 8);
+  gen_function(Valve_to_1, 8);         
+  gen_function(reset, 8);             // Reset pump every 1 time machine turns on
   digitalWrite(WorkingOutput, LOW);  //program starts with WORKING light off
   digitalWrite(WashOutput, LOW);     //program starts with Washed light off
   Green_LEDs_out();
@@ -301,9 +316,10 @@ void loop()
   int WashSignal = digitalRead(WashInput);
   int ManualSignal = digitalRead(ManualInput);
   int WashOutputSignal = digitalRead(WashOutput);
-  int AutoSignal = digitalRead(AutoInput);
+  int Auto_1_Signal = digitalRead(AutoInput_1);
   int GoSignal = digitalRead(GoInput);
-  int FlexSignal = digitalRead(FlexInput);
+  int Auto_2_Signal = digitalRead(AutoInput_2);
+  int Auto_3_Signal = digitalRead(AutoInput_3);
   int SwitchAMode = digitalRead(SwitchA);                                                //Define presence applicator for switch A
   int SwitchBMode = digitalRead(SwitchB);                                                //Define presence applicator for switch B
   int SwitchCMode = digitalRead(SwitchC);                                                //Define presence applicator for switch C
@@ -317,11 +333,23 @@ void loop()
     Reset_function();
     Wash_function(); 
   }
-  if (WashOutputSignal == HIGH && AutoSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO
+  if (/*WashOutputSignal == HIGH && */Auto_1_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 1
   {
     Reset_function();
-    Auto_function(); //testing back and forth
+    Auto_function(1); //testing back and forth
   }
+  if (/*WashOutputSignal == HIGH && */Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2
+  {
+    Reset_function();
+    Auto_function(2); //testing back and forth
+  }
+  
+    if (/*WashOutputSignal == HIGH && */Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 3
+  {
+    Reset_function();
+    Auto_function(3); //testing back and forth
+  } 
+  
   if (WashOutputSignal == HIGH && ManualSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at MANUAL
   {
     Reset_function();
