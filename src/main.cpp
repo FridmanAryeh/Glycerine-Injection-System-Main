@@ -1,10 +1,22 @@
+//// END CODE MUST TURN WASH CONDITION BACK ON
+
 #include <SoftwareSerial.h>
 #include <Arduino.h>
 #include "parameters.h"
 
 SoftwareSerial Pump(Recieve_From_Pump, Transmit_To_Pump);  //Defining pins for pump serial input and ouput
 
-void Green_LEDs_out() // turns off all green LEDs
+
+void Green_LEDs_on() // Turns on all green LEDs
+{
+  digitalWrite(LED_A, HIGH);
+  digitalWrite(LED_B, HIGH);
+  digitalWrite(LED_C, HIGH);
+  digitalWrite(LED_D, HIGH);
+  digitalWrite(LED_E, HIGH);  
+}
+
+void Green_LEDs_off() // function turns off all green LEDs
 {
   digitalWrite(LED_A, LOW);
   digitalWrite(LED_B, LOW);
@@ -13,6 +25,7 @@ void Green_LEDs_out() // turns off all green LEDs
   digitalWrite(LED_E, LOW);
 }
 
+
 void Clean_Pump_Serial()   // function which reads buffer and by that empties it
 {
   for (int i = 0; i < 65; i++){
@@ -20,40 +33,36 @@ void Clean_Pump_Serial()   // function which reads buffer and by that empties it
   }
 }
 
-void gen_function(byte command[], int size_t) // function verifies each pump command is only given once previous command is completed
-{  
-  int flag;
+void gen_function(const byte command[], int size_t)// function verifies each pump command is only given once previous command is completed
+
+{
+  int isBusy;
   Clean_Pump_Serial();
   Pump.write(command, size_t);
   do {
     delay(500);
     Clean_Pump_Serial();
-    Pump.write(Query,8);
-    byte Data[8];
-    Pump.readBytes(Data, 8);
-    int comparison = memcmp(Data, busy, size_t);  //compare response with defined busy response. if the same, function will return 0
-    if (comparison == 0) {
-      flag = 1;
-    } else if (comparison != 0) {
-      flag = 0;
-    }
-  } while (flag == 1); // As long as pump returns "busy" response, keep on sending command
+    Pump.write(Query, 8);
+    byte response[8];
+    Pump.readBytes(response, 8);
+    isBusy = memcmp(response, busy, size_t) == 0 ? 1 : 0;
+  } while (isBusy);
 }
 
-void Wash_cycle(byte valve[]) // cycle of wash - change to tank, take glycerine, switch to valve, push
+void Wash_cycle(byte valve[]) // cycle of wash - change to tank, intake of glycerine, switch to designated port, push
 {
     gen_function(Valve_to_1, 8);
     gen_function(Speed_1_mms, 8);
     gen_function(intake_2400, 8);
     delay(20000);
     gen_function(valve, 8);
-    gen_function(Speed_08_mms, 8);
+    gen_function(Speed_05_mms, 8);
     gen_function(push_2400, 8);
 }
 
 void Wash_function()  // Replace all old glycerine in pipes with new glycerine
 {  
-    Green_LEDs_out();
+    Green_LEDs_off();
     digitalWrite(WorkingOutput, HIGH);  
     Clean_Pump_Serial();
     Wash_cycle(Valve_to_2);
@@ -67,89 +76,94 @@ void Wash_function()  // Replace all old glycerine in pipes with new glycerine
 
 void Check_Switch(int SwitchMode, byte valve[], byte push[]) // Checking if the switch is on. if on - aspirate to applicator. if off - wait the amount of time it would take to aspirate
 { 
-  if (SwitchMode == HIGH){
+  if (SwitchMode)
+  {
     gen_function(valve, 8);
     gen_function(push, 8);
   }
   else
   {
-    delay(4500);
+    delay(3619); // time it would take to push 12 ul
   }
-  delay(4000);
 }
 
 void Auto(byte intake[], byte push[], int reps, long end_delay, int SwitchAMode, int SwitchBMode, int SwitchCMode, int SwitchDMode, int SwitchEMode){ // general program without parameters 
     digitalWrite(WorkingOutput, HIGH);  //Turn on WORKING light
-    Green_LEDs_out();
+    Green_LEDs_off();
     gen_function(Speed_1_mms, 8);
     gen_function(Valve_to_1, 8);
     gen_function(intake, 8);
-    delay(5000); // short delay in order to stabilize pressure
+    delay(6000); // short delay in order to stabilize pressure
     gen_function(Speed_003_mms, 8);
     for (int t = 0; t < reps; t++)  // repeat sequence 
-    {
+    { 
       Check_Switch(SwitchAMode, Valve_to_2, push);
       Check_Switch(SwitchBMode, Valve_to_3, push);
       Check_Switch(SwitchCMode, Valve_to_4, push);
       Check_Switch(SwitchDMode, Valve_to_5, push);
       Check_Switch(SwitchEMode, Valve_to_6, push);
     }
+
+    if (SwitchAMode)// PATCH! - after a lot of experiments, port A specifically is usually missing fluid. Code adds a little more assuming port is open
+    {
+      gen_function(Valve_to_2, 8);
+      gen_function(push_4, 8);
+    }
+    
     delay(end_delay);
-    Green_LEDs_on();
+
+    if (SwitchAMode){digitalWrite(LED_A, HIGH);} //Turn on A if applicator present
+    if (SwitchBMode){digitalWrite(LED_B, HIGH);} //Turn on B if applicator present
+    if (SwitchCMode){digitalWrite(LED_C, HIGH);} //Turn on C if applicator present
+    if (SwitchDMode){digitalWrite(LED_D, HIGH);} //Turn on D if applicator present
+    if (SwitchEMode){digitalWrite(LED_E, HIGH);} //Turn on E if applicator present
+    
     digitalWrite(WorkingOutput, LOW); 
 }
 
-void Auto_function(int option, int SwitchAMode, int SwitchBMode, int SwitchCMode, int SwitchDMode, int SwitchEMode){ // parameters for each program
+void Auto_function(int option, int SwitchAMode, int SwitchBMode, int SwitchCMode, int SwitchDMode, int SwitchEMode) // parameters for each program
+{
   switch (option)
   {
   case 1: // NEEDLE, FLEX 1/2 seeds - 48 ul to each applicator
-    Auto(intake_240,push_12,4,80000, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
+    Auto(intake_250,push_12,4,45000, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
     break;
-  case 2: // FLEX 3/4 seeds - 44 ul to each applicator
-    Auto(intake_220,push_11,4,95000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode);
+  case 2: // FLEX 3/4 seeds - 44 ul to each applicator with more delay time to equalize pressure
+    Auto(intake_250,push_11,4,60000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode);
     break;
-  case 3: // FLEX 5/6 seeds - 40 ul to each applicator
-    Auto(intake_200,push_10,4,105000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode);
+  case 3: // FLEX 5/6 seeds - 38 ul to each applicator with more delay time to equalize pressure
+    Auto(intake_250,push_9_5,4,115000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode);
     break;  
   }
 }
 
-void Manual_function() // Specific function which adds 30 ul to applicator which is inserted into port A
+void Manual_function() // function which "manually" adds 4 ul to applicator which is inserted into port A
 {
-  digitalWrite(WorkingOutput, HIGH);  //Turn on WORKING light
-  Green_LEDs_out();
+  digitalWrite(WorkingOutput, HIGH); 
+  Green_LEDs_off();
   gen_function(Valve_to_1, 8);
   gen_function(Speed_1_mms, 8);
   gen_function(intake_30, 8);
+  delay(2000);
   gen_function(Valve_to_2, 8);
   gen_function(Speed_003_mms, 8);
-  delay(2000);
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 1; i++) //loop in case want to change amount of iterations
   {
-    gen_function(push_10,8);
-    delay(10000);
+    gen_function(push_4,8);
+    delay(30000);
   }
   digitalWrite(LED_A, HIGH);
-  digitalWrite(WorkingOutput, LOW);  // Turn off WORKING light
+  digitalWrite(WorkingOutput, LOW);
 }
  
 void Reset_function()  // Command to bring pump back to port 1. Reset command empties syringe and resest pump.
 {  
-  digitalWrite(WorkingOutput, HIGH);  //Turn on WORKING light
-  Green_LEDs_out();
+  digitalWrite(WorkingOutput, HIGH); 
+  Green_LEDs_off();
   gen_function(Valve_to_1, 8);
   gen_function(Speed_1_mms, 8);
   gen_function(reset, 8);
-  digitalWrite(WorkingOutput, LOW);  // Turn off WORKING light
-}
-
-void Green_LEDs_on() // Turns on all green LEDs
-{
-  digitalWrite(LED_A, HIGH);
-  digitalWrite(LED_B, HIGH);
-  digitalWrite(LED_C, HIGH);
-  digitalWrite(LED_D, HIGH);
-  digitalWrite(LED_E, HIGH);  
+  digitalWrite(WorkingOutput, LOW); 
 }
 
 void setup() // General setup - happens each time machine turns on and off (every time Arduino's power turns on after being off)
@@ -177,11 +191,11 @@ void setup() // General setup - happens each time machine turns on and off (ever
   pinMode(LED_B, OUTPUT);              //17
   pinMode(LED_C, OUTPUT);              //18
   pinMode(LED_D, OUTPUT);              //19
-  pinMode(LED_E, OUTPUT);              //11         
-  gen_function(reset, 8);              // Reset pump every time machine turns on
+  pinMode(LED_E, OUTPUT);              //11 
+  Reset_function();        
   digitalWrite(WorkingOutput, LOW);    //program starts with WORKING light off
   digitalWrite(WashOutput, LOW);       //program starts with Washed light off
-  Green_LEDs_out();
+  Green_LEDs_off();
 }
 
 void loop() // Constant code, running over and again as long as Arduino is on
@@ -190,15 +204,17 @@ void loop() // Constant code, running over and again as long as Arduino is on
   int WashSignal = digitalRead(WashInput);
   int ManualSignal = digitalRead(ManualInput);
   int WashOutputSignal = digitalRead(WashOutput);
-  int Auto_1_Signal = digitalRead(AutoInput_1);
   int GoSignal = digitalRead(GoInput);
+  int Auto_1_Signal = digitalRead(AutoInput_1);
   int Auto_2_Signal = digitalRead(AutoInput_2);
   int Auto_3_Signal = digitalRead(AutoInput_3);
-  int SwitchAMode = digitalRead(SwitchA);                                                //Define presence applicator for switch A
-  int SwitchBMode = digitalRead(SwitchB);                                                //Define presence applicator for switch B
-  int SwitchCMode = digitalRead(SwitchC);                                                //Define presence applicator for switch C
-  int SwitchDMode = analogRead(SwitchD) / 1023;                                      //Define presence applicator for switch D  NOTE - using analog pin!
-  int SwitchEMode = analogRead(SwitchE) / 1023;                                      //Define presence applicator for switch E. NOTE - using analog pin!
+  int SwitchAMode = digitalRead(SwitchA);            //Define presence applicator for switch A
+  int SwitchBMode = digitalRead(SwitchB);            //Define presence applicator for switch B
+  int SwitchCMode = digitalRead(SwitchC);            //Define presence applicator for switch C
+  int SwitchDMode = analogRead(SwitchD) / 1023;      //Define presence applicator for switch D  NOTE - using analog pin!
+  int SwitchEMode = analogRead(SwitchE) / 1023;      //Define presence applicator for switch E  NOTE - using analog pin!
+
+//// END CODE MUST TURN WASH CONDITION BACK ON
 
 //___Main Code___
   if (WashSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at WASH
@@ -222,7 +238,7 @@ void loop() // Constant code, running over and again as long as Arduino is on
     Auto_function(3,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   } 
   
-  if (WashOutputSignal == HIGH && ManualSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at MANUAL
+  if (/*WashOutputSignal == HIGH && */ManualSignal == LOW && GoSignal == LOW && SwitchAMode == HIGH) // GO button is pressed, Switch at MANUAL
   {
     Reset_function();
     Manual_function();  
