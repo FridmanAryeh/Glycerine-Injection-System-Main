@@ -83,7 +83,7 @@ void Check_Switch(int SwitchMode, byte valve[], byte push[]) // Checking if the 
   }
   else
   {
-    delay(3619); // time it would take to push 12 ul
+    delay(4000); // aprx time it would take to push 12 ul
   }
 }
 
@@ -198,7 +198,7 @@ void setup() // General setup - happens each time machine turns on and off (ever
   Green_LEDs_off();
 }
 
-void loop() // Constant code, running over and again as long as Arduino is on
+void loop() // Constant code, running in loops as long as Arduino is on
 {
 // ___Definitions of Variables___
   int WashSignal = digitalRead(WashInput);
@@ -214,31 +214,29 @@ void loop() // Constant code, running over and again as long as Arduino is on
   int SwitchDMode = analogRead(SwitchD) / 1023;      //Define presence applicator for switch D  NOTE - using analog pin!
   int SwitchEMode = analogRead(SwitchE) / 1023;      //Define presence applicator for switch E  NOTE - using analog pin!
 
-//// END CODE MUST TURN WASH CONDITION BACK ON
-
 //___Main Code___
   if (WashSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at WASH
   { 
     Reset_function();
     Wash_function(); 
   }
-  if (/*WashOutputSignal == HIGH && */Auto_1_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 1 - NEEDLE, FLEX 1,2
+  if (WashOutputSignal == HIGH && Auto_1_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 1 - NEEDLE, FLEX 1,2
   {
     Reset_function();
     Auto_function(1, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (/*WashOutputSignal == HIGH && */Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 3,4
+  if (WashOutputSignal == HIGH && Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 3,4
   {
     Reset_function();
     Auto_function(2,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-    if (/*WashOutputSignal == HIGH && */Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 3 - FLEX 5,6
+    if (WashOutputSignal == HIGH && Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 3 - FLEX 5,6
   {
     Reset_function();
     Auto_function(3,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   } 
   
-  if (/*WashOutputSignal == HIGH && */ManualSignal == LOW && GoSignal == LOW && SwitchAMode == HIGH) // GO button is pressed, Switch at MANUAL
+  if (WashOutputSignal == HIGH && ManualSignal == LOW && GoSignal == LOW && SwitchAMode == HIGH) // GO button is pressed, Switch at MANUAL
   {
     Reset_function();
     Manual_function();  
