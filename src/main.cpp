@@ -1,5 +1,3 @@
-//// END CODE MUST TURN WASH CONDITION BACK ON
-
 #include <SoftwareSerial.h>
 #include <Arduino.h>
 #include "parameters.h"
@@ -222,8 +220,6 @@ void loop() // Constant code, running in loops as long as Arduino is on
   int SwitchEMode = analogRead(SwitchE) / 1023;      //Define presence applicator for switch E  NOTE - using analog pin!
   bool Bottom_panel_open = ((analogRead(Limit_Switch) / 1023.0) > 0.5); //checking if panel is open. 
 
-///////  BEFORE DELIVERY - CHANGE BACK WASHOUTPUT SIGNAL CONDITION /////// CHANGE TIMES OF MICROSWITCH
-
 //___Main Code___
 
 // 1. Heating Control //
@@ -281,19 +277,19 @@ void loop() // Constant code, running in loops as long as Arduino is on
     preheat_required = false;
     Auto_function(1, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (/*WashOutputSignal == HIGH &&*/  Bottom_panel_open &&  Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 
+  if (WashOutputSignal == HIGH &&  Bottom_panel_open &&  Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 
   {
     Reset_function();
     Check_Preheat(preheat_required);
     preheat_required = false;
     Auto_function(2,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   } 
-  if (/*WashOutputSignal == HIGH &&*/Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 4 - LOADING DEVICE 10
+  if (WashOutputSignal == HIGH && Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 4 - LOADING DEVICE 10
   {
     Reset_function();
     Auto_function(3,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (/*WashOutputSignal == HIGH &&*/Auto_4_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 5 - LOADING DEVICE 20
+  if (WashOutputSignal == HIGH && Auto_4_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 5 - LOADING DEVICE 20
   {
     Reset_function();
     Auto_function(4,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
