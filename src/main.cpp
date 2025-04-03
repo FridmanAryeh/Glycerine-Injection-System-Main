@@ -2,9 +2,12 @@
 #include <Arduino.h>
 #include "parameters.h"
 
-bool preheat_required;
+bool preheat_required = false;
 long time_of_last_closed;
 long time_of_last_off;
+bool just_closed = false;
+bool just_off = false;
+
 
 SoftwareSerial Pump(Recieve_From_Pump, Transmit_To_Pump);  //Defining pins for pump serial input and ouput
 
@@ -114,7 +117,7 @@ void Auto_function(int option, int SwitchAMode, int SwitchBMode, int SwitchCMode
     Auto(intake_255,push_4_15,Speed_009_mms,12,40000, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode, 1);
     break;
   case 2: // FLEX - 43 ul to each applicator with more delay time to equalize pressure
-    Auto(intake_225,push_1_66,Speed_006_mms,26,60000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode, 2);
+    Auto(intake_225,push_1_66,Speed_006_mms,27,60000,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode, 2);
     break;
   case 3: // LOADING DEVICE 10, 130 ul to each applicator
     Auto(intake_680,push_130,Speed_1_mms,1,0, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode, 3);
@@ -159,7 +162,7 @@ void Check_Preheat(bool Preheat_required)
   if (Preheat_required)
   {
     digitalWrite(Heating, HIGH); /// turn on heat
-    for (int i = 0; i < 240; i++) /// flash working light
+    for (int i = 0; i < 180; i++) /// flash working light for 3 minutes
     {
       digitalWrite(WorkingOutput, HIGH);
       delay(500);
@@ -198,8 +201,7 @@ void setup() // General setup - happens each time machine turns on and off (ever
   digitalWrite(WorkingOutput, LOW);    //program starts with WORKING light off
   digitalWrite(WashOutput, LOW);       //program starts with Washed light off
   digitalWrite(LED_Done, LOW);
-  digitalWrite(Heating, HIGH); // Machine turns on, heat starts
-  
+  digitalWrite(Heating, HIGH); // Machine turns on, heat starts 
 }
 
 void loop() // Constant code, running in loops as long as Arduino is on
@@ -207,7 +209,6 @@ void loop() // Constant code, running in loops as long as Arduino is on
 // ___Definitions of Variables___
   int WashSignal = digitalRead(WashInput);
   int ManualSignal = digitalRead(ManualInput);
-  int WashOutputSignal = digitalRead(WashOutput);
   int GoSignal = digitalRead(GoInput);
   int Auto_1_Signal = digitalRead(AutoInput_1);
   int Auto_2_Signal = digitalRead(AutoInput_2);
@@ -219,49 +220,56 @@ void loop() // Constant code, running in loops as long as Arduino is on
   int SwitchDMode = analogRead(SwitchD) / 1023;      //Define presence applicator for switch D  NOTE - using analog pin!
   int SwitchEMode = analogRead(SwitchE) / 1023;      //Define presence applicator for switch E  NOTE - using analog pin!
   bool Bottom_panel_open = ((analogRead(Limit_Switch) / 1023.0) > 0.5); //checking if panel is open. 
-
+  
 //___Main Code___
-
+  
 // 1. Heating Control //
-  if (!Bottom_panel_open && time_of_last_closed == 0) //// if box is closed and has just been closed, start timer of how long box is closed
-  {
-    time_of_last_closed = millis();
-  }
-
-// If heating just turned off, store the time once
-  if (digitalRead(Heating) == LOW && time_of_last_off == 0) 
-  {
-    time_of_last_off = millis();
-  }
-
   long duration_box_closed = millis() - time_of_last_closed; //defining variable of how long box was closed
   long duration_heating_off = millis() - time_of_last_off;    //defining variable of how long heating was off
 
-// If the box is open, reset timers
-  if(Bottom_panel_open) 
+  if(!Bottom_panel_open) // if the panel is closed
   {
-    time_of_last_closed = 0;
-    time_of_last_off = 0;
+    if(just_closed) // if it was just closed
+    {
+      time_of_last_closed = millis();
+      just_closed = false;
+    }
+    else // if panel has been closed for a while
+    {
+      if (duration_box_closed > 180000) // if the panel was closed for 3 min
+      {
+        if (digitalRead(Heating)==0) // if the heating is off already
+        {
+          if (just_off) // if heating has just turned off
+          {
+            time_of_last_off = millis();
+            just_off = false;
+          }
+          else // if heating was off for a while already
+          {
+            if (duration_heating_off > 420000)// if heating was off for 7 min
+            {
+              preheat_required = true; //next fill of flex and needle will require delay of 3 min for reheating
+            }
+          }
+        }
+        else // Turn off the heating
+        {
+          digitalWrite(Heating,LOW);
+          just_off = true;
+        }
+      }
+    }
+  }
+  else // if panel is open
+  {
+    digitalWrite(Heating,HIGH);
     duration_box_closed = 0;
     duration_heating_off = 0;
-    digitalWrite(Heating, HIGH);
+    just_closed = true;
+    just_off = true;
   }
 
-// Turn heating off after 2 min 
-  if (duration_box_closed > 120000) 
-  {
-  digitalWrite(Heating, LOW);
-  duration_box_closed = 0;  // Reset duration tracking
-  time_of_last_off = millis(); // Store when heating turned off
-  }
-
-// If heating was off for 3 min, require reheating
-  if (duration_heating_off > 180000) 
-  {
-    preheat_required = true;
-    duration_heating_off = 0; // Reset duration tracking
-  }
-  
  // 2. Glycerin filling programs // 
   if (WashSignal == LOW && GoSignal == LOW) // GO button is pressed, Switch at WASH
   { 
@@ -270,31 +278,31 @@ void loop() // Constant code, running in loops as long as Arduino is on
     preheat_required = false;
     Wash_function();  
   }
-  if (/*WashOutputSignal == HIGH &&*/ Bottom_panel_open && Auto_1_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 1 - NEEDLE
+  if (Bottom_panel_open && Auto_1_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 1 - NEEDLE
   {
     Reset_function();
     Check_Preheat(preheat_required);
     preheat_required = false;
     Auto_function(1, SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (WashOutputSignal == HIGH &&  Bottom_panel_open &&  Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 
+  if (Bottom_panel_open &&  Auto_2_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 2 - FLEX 
   {
     Reset_function();
     Check_Preheat(preheat_required);
     preheat_required = false;
     Auto_function(2,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   } 
-  if (WashOutputSignal == HIGH && Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 4 - LOADING DEVICE 10
+  if (Auto_3_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 4 - LOADING DEVICE 10
   {
     Reset_function();
     Auto_function(3,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (WashOutputSignal == HIGH && Auto_4_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 5 - LOADING DEVICE 20
+  if (Auto_4_Signal == LOW && GoSignal == LOW) // GO button is pressed, Switch at AUTO 5 - LOADING DEVICE 20
   {
     Reset_function();
     Auto_function(4,  SwitchAMode, SwitchBMode, SwitchCMode, SwitchDMode, SwitchEMode); 
   }
-  if (/*WashOutputSignal == HIGH && */ManualSignal == LOW && GoSignal == LOW && SwitchAMode == HIGH) // GO button is pressed, Switch at MANUAL
+  if (ManualSignal == LOW && GoSignal == LOW && SwitchAMode == HIGH) // GO button is pressed, Switch at MANUAL
   {
     Reset_function();
     Manual_function();  
